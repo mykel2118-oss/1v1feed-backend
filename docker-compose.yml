@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: 1v1feed_postgres
+    environment:
+      POSTGRES_USER: 1v1feed
+      POSTGRES_PASSWORD: 1v1feed_password
+      POSTGRES_DB: 1v1feed
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U 1v1feed"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: .
+    container_name: 1v1feed_backend
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://1v1feed:1v1feed_password@postgres:5432/1v1feed
+      BETTER_AUTH_SECRET: dev-secret-key-change-in-production
+      API_BASE_URL: http://localhost:3000
+      CORS_ORIGIN: http://localhost:3000,http://localhost:8081,http://localhost:3001
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: pnpm run dev
+
+volumes:
+  postgres_data:
